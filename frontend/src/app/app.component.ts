@@ -1,12 +1,31 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Auth, authState, signInWithEmailAndPassword, signOut } from '@angular/fire/auth';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  standalone: true,
+  imports: [RouterModule]
 })
 export class AppComponent {
-  title = 'frontend-temp';
+  title = 'Your App Title';
+
+  private auth = inject(Auth);
+
+  constructor() {
+    authState(this.auth).subscribe(user => {
+      console.log('Current user:', user);
+    });
+  }
+
+  login(email: string, password: string) {
+    signInWithEmailAndPassword(this.auth, email, password)
+      .then(cred => console.log('Logged in:', cred.user))
+      .catch(err => console.error(err));
+  }
+
+  logout() {
+    signOut(this.auth);
+  }
 }

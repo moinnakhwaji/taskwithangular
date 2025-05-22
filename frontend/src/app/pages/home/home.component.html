@@ -1,0 +1,13 @@
+<div class="todo-container">
+  <h2>My Todos</h2>
+
+  <input #todoInput type="text" placeholder="Enter todo..." />
+  <button (click)="addTodo(todoInput.value); todoInput.value = ''">Add</button>
+
+  <ul>
+    <li *ngFor="let todo of todos$ | async">
+     {{ todo['text'] }}
+      <button (click)="deleteTodo(todo.id)">Delete</button>
+    </li>
+  </ul>
+</div>
