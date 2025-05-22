@@ -1,13 +1,86 @@
-<div class="todo-container">
-  <h2>My Todos</h2>
+<div class="max-w-xl mx-auto p-4 bg-gray-900 text-gray-100 rounded shadow-lg mt-8">
+  <h2 class="text-3xl font-bold mb-4 text-purple-400">My Todos</h2>
 
-  <input #todoInput type="text" placeholder="Enter todo..." />
-  <button (click)="addTodo(todoInput.value); todoInput.value = ''">Add</button>
+  <div class="mb-4 space-y-3">
+    <input
+      type="text"
+      placeholder="Title"
+      [(ngModel)]="title"
+      class="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
+    />
+
+    <textarea
+      placeholder="Description"
+      [(ngModel)]="description"
+      class="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
+      rows="3"
+    ></textarea>
+
+    <div class="flex space-x-4">
+      <select
+        [(ngModel)]="status"
+        class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
+      >
+        <option value="Active">Active</option>
+        <option value="Completed">Completed</option>
+        <option value="Pending">Pending</option>
+      </select>
+
+      <select
+        [(ngModel)]="priority"
+        class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
+      >
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
+    </div>
+
+    <button
+      (click)="addTodo()"
+      class="w-full bg-purple-600 hover:bg-purple-700 transition rounded py-2 font-semibold"
+    >
+      Add Todo
+    </button>
+  </div>
 
   <ul>
-    <li *ngFor="let todo of todos$ | async">
-     {{ todo['text'] }}
-      <button (click)="deleteTodo(todo.id)">Delete</button>
+    <li
+      *ngFor="let todo of todos$ | async"
+      class="flex justify-between items-center p-3 mb-2 rounded bg-gray-800 border border-gray-700"
+    >
+      <div>
+        <h3 class="font-semibold text-lg text-purple-300">{{ todo.title }}</h3>
+        <p class="text-gray-400 text-sm">{{ todo.description }}</p>
+        <small
+          class="inline-block mt-1 px-2 py-0.5 text-xs rounded
+          "
+          [ngClass]="{
+            'bg-green-600': todo.status === 'Completed',
+            'bg-yellow-600': todo.status === 'Pending',
+            'bg-blue-600': todo.status === 'Active'
+          }"
+        >
+          {{ todo.status }}
+        </small>
+        <small
+          class="inline-block ml-2 mt-1 px-2 py-0.5 text-xs rounded
+          "
+          [ngClass]="{
+            'bg-red-600': todo.priority === 'High',
+            'bg-yellow-600': todo.priority === 'Medium',
+            'bg-green-600': todo.priority === 'Low'
+          }"
+        >
+          {{ todo.priority }}
+        </small>
+      </div>
+      <button
+        (click)="deleteTodo(todo.id)"
+        class="text-red-500 hover:text-red-600 font-bold"
+      >
+        Delete
+      </button>
     </li>
   </ul>
 </div>

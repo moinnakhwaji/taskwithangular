@@ -1,14 +1,18 @@
-// src/app/services/todo.service.ts
-
-import { Injectable, inject } from '@angular/core';
 import {
   Firestore,
+  collection,
+  query,
+  where,
   collectionData,
   addDoc,
-  collection,
   deleteDoc,
-  doc
+  doc,
+  CollectionReference,
+  DocumentData,
 } from '@angular/fire/firestore';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
+import { Todo } from './todo.model';
 import { Auth } from '@angular/fire/auth';
 
 @Injectable({ providedIn: 'root' })
@@ -16,51 +20,61 @@ export class TodoService {
   private firestore = inject(Firestore);
   private auth = inject(Auth);
 
-  getTodos() {
-    const todosRef = collection(this.firestore, 'todos');
-    return collectionData(todosRef, { idField: 'id' });
+  private converter = {
+    toFirestore: (todo: Todo): DocumentData => ({ ...todo }),
+    fromFirestore: (snapshot: any): Todo => {
+      const data = snapshot.data();
+      return {
+        //@ts-ignore
+        id: snapshot.id,
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+        uid: data.uid,
+        email: data.email,
+      };
+    },
+  };
+
+  private todosCollection: CollectionReference<Todo> = collection(
+    this.firestore,
+    'todos'
+  ).withConverter(this.converter);
+
+  getTodos(): Observable<Todo[]> {
+    const user = this.auth.currentUser;
+    if (!user || !user.email) throw new Error('User not authenticated');
+
+    const userQuery = query(
+      this.todosCollection,
+      where('email', '==', user.email)
+    );
+
+    return collectionData(userQuery, { idField: 'id' }) as Observable<Todo[]>;
   }
 
-  addTodo(todo: any) {
-    const todosRef = collection(this.firestore, 'todos');
-    return addDoc(todosRef, todo);
+  addTodo(todo: Todo) {
+    const user = this.auth.currentUser;
+    if (!user || !user.email) throw new Error('User not authenticated');
+
+    const todoWithEmail: Todo = {
+      ...todo,
+      email: user.email,
+      uid: user.uid,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    return addDoc(this.todosCollection, todoWithEmail);
   }
 
   deleteTodo(id: string) {
-    const todoDocRef = doc(this.firestore, 'todos', id);
+    const todoDocRef = doc(this.firestore, 'todos', id).withConverter(
+      this.converter
+    );
     return deleteDoc(todoDocRef);
   }
 }
-
-
-// src/app/services/todo.service.ts
-
-// import { Injectable } from '@angular/core';
-// import { HttpClient } from '@angular/common/http';
-// import { Observable } from 'rxjs';
-
-// export interface Todo {
-//   id?: string;
-//   title: string;
-//   completed?: boolean;
-//   // other fields
-// }
-
-// @Injectable({ providedIn: 'root' })
-// export class TodoService {
-//   private apiUrl = 'https://your-backend-api.com/api/todos'; // Replace with your actual API URL
-
-//   constructor(private http: HttpClient) {}
-
-//   getTodos(): Observable<Todo[]> {
-//     return this.http.get<Todo[]>(this.apiUrl);
-//   }
-
-//   addTodo(todo: Todo): Observable<Todo> {
-//     return this.http.post<Todo>(this.apiUrl, todo);
-//   }
-
-//   deleteTodo(id: string): Observable<void> {
-//     return this.http.delete<void>(`${this.apiUrl}/${id}`);
-//   }
-// }
