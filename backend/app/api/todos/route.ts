@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import admin from "@/firebase/firebaseAdmin";
 
-const ALLOWED_ORIGIN = "http://localhost:4200"; // your Angular app origin
+const ALLOWED_ORIGIN =  process.env.FRONTEND_URL || "http://localhost:4200";
 
-// Helper to create CORS headers
+// Helper to add CORS headers
 function addCorsHeaders(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
   response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -12,15 +12,14 @@ function addCorsHeaders(response: NextResponse) {
   return response;
 }
 
-
+// Handle OPTIONS preflight request
 export async function OPTIONS() {
-  // Handle OPTIONS preflight request
-  const response = NextResponse.json(null, { status: 204 }); // No content response for preflight
+  const response = new NextResponse(null, { status: 204 }); // ✅ Correct way for 204 No Content
   return addCorsHeaders(response);
 }
 
+// Handle GET request
 export async function GET(req: NextRequest) {
-  // Add CORS headers to all responses
   const token = req.headers.get("authorization")?.split("Bearer ")[1];
   if (!token) {
     const res = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -33,10 +32,9 @@ export async function GET(req: NextRequest) {
 
     const snapshot = await admin.firestore().collection("todos")
       .where("userId", "==", userId)
-      .orderBy("createdAt", "desc")
       .get();
 
-    //@ts-ignore
+   
     const todos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const res = NextResponse.json(todos);
     return addCorsHeaders(res);
@@ -46,6 +44,7 @@ export async function GET(req: NextRequest) {
     return addCorsHeaders(res);
   }
 }
+
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.split("Bearer ")[1];

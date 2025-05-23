@@ -1,84 +1,343 @@
-<div class="max-w-xl mx-auto p-4 bg-gray-900 text-gray-100 rounded shadow-lg mt-8">
-  <h2 class="text-3xl font-bold mb-4 text-purple-400">My Todos</h2>
-
-  <div class="mb-4 space-y-3">
-    <input
-      type="text"
-      placeholder="Title"
-      [(ngModel)]="title"
-      class="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
-    />
-
-    <textarea
-      placeholder="Description"
-      [(ngModel)]="description"
-      class="w-full p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
-      rows="3"
-    ></textarea>
-
-    <div class="flex space-x-4">
-      <select
-        [(ngModel)]="status"
-        class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
-      >
-        <option value="Active">Active</option>
-        <option value="Completed">Completed</option>
-        <option value="Pending">Pending</option>
-      </select>
-
-      <select
-        [(ngModel)]="priority"
-        class="flex-1 p-2 rounded bg-gray-800 border border-gray-700 focus:outline-purple-500"
-      >
-        <option value="Low">Low</option>
-        <option value="Medium">Medium</option>
-        <option value="High">High</option>
-      </select>
+<!-- home.component.html -->
+<div class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+        ✨ My Todo Dashboard
+      </h1>
+      <p class="text-gray-300">Organize your tasks with style</p>
     </div>
 
-    <button
-      (click)="addTodo()"
-      class="w-full bg-purple-600 hover:bg-purple-700 transition rounded py-2 font-semibold"
-    >
-      Add Todo
-    </button>
-  </div>
+    <!-- Error Message -->
+    <div *ngIf="error" class="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-red-300 flex items-center space-x-2">
+      <span>⚠️</span>
+      <span>{{ error }}</span>
+      <button (click)="clearError()" class="ml-auto text-red-400 hover:text-red-300">✕</button>
+    </div>
 
-  <ul>
-    <li
-      *ngFor="let todo of todos$ | async"
-      class="flex justify-between items-center p-3 mb-2 rounded bg-gray-800 border border-gray-700"
-    >
-      <div>
-        <h3 class="font-semibold text-lg text-purple-300">{{ todo.title }}</h3>
-        <p class="text-gray-400 text-sm">{{ todo.description }}</p>
-        <small
-          class="inline-block mt-1 px-2 py-0.5 text-xs rounded"
-          [ngClass]="{
-            'bg-green-600': todo.status === 'Completed',
-            'bg-yellow-600': todo.status === 'Pending',
-            'bg-blue-600': todo.status === 'Active'
-          }"
-        >
-          {{ todo.status }}
-        </small>
-        <small
-          class="inline-block ml-2 mt-1 px-2 py-0.5 text-xs rounded"
-          [ngClass]="{
-            'bg-red-600': todo.priority === 'High',
-            'bg-yellow-600': todo.priority === 'Medium',
-            'bg-green-600': todo.priority === 'Low'
-          }"
-        >
-          {{ todo.priority }}
-        </small>
+    <!-- Loading Indicator -->
+    <div *ngIf="isLoading" class="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-lg text-blue-300 flex items-center space-x-2">
+      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+      <span>Loading...</span>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-purple-400">{{ stats.total }}</div>
+        <div class="text-gray-400 text-sm">Total</div>
       </div>
-      <button
-        (click)="todo.id && deleteTodo(todo.id)"
-        class="text-red-500 hover:text-red-600 font-bold"
-      >
-        Delete
-      </button>
-    </li>
-  </ul>
+      <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-blue-400">{{ stats.active }}</div>
+        <div class="text-gray-400 text-sm">Active</div>
+      </div>
+      <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-400">{{ stats.completed }}</div>
+        <div class="text-gray-400 text-sm">Completed</div>
+      </div>
+      <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-yellow-400">{{ stats.pending }}</div>
+        <div class="text-gray-400 text-sm">Pending</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Add Todo Form -->
+      <div class="lg:col-span-1">
+        <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-xl">
+          <h2 class="text-2xl font-bold mb-6 text-purple-400 flex items-center space-x-2">
+            <span>➕</span>
+            <span>Add New Todo</span>
+          </h2>
+          
+          <form (ngSubmit)="addTodo()" class="space-y-4">
+            <div>
+              <label class="block text-gray-300 text-sm font-medium mb-2">Title *</label>
+              <input
+                type="text"
+                placeholder="Enter todo title..."
+                [(ngModel)]="title"
+                name="title"
+                required
+                class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white placeholder-gray-400"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-gray-300 text-sm font-medium mb-2">Description</label>
+              <textarea
+                placeholder="Enter description..."
+                [(ngModel)]="description"
+                name="description"
+                class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white placeholder-gray-400 resize-none"
+                rows="3"
+              ></textarea>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-gray-300 text-sm font-medium mb-2">Status</label>
+                <select
+                  [(ngModel)]="status"
+                  name="status"
+                  class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                >
+                  <option value="Active">🔵 Active</option>
+                  <option value="Pending">⏳ Pending</option>
+                  <option value="Completed">✅ Completed</option>
+                </select>
+              </div>
+              
+              <div>
+                <label class="block text-gray-300 text-sm font-medium mb-2">Priority</label>
+                <select
+                  [(ngModel)]="priority"
+                  name="priority"
+                  class="w-full p-3 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                >
+                  <option value="Low">🟢 Low</option>
+                  <option value="Medium">🟡 Medium</option>
+                  <option value="High">🔴 High</option>
+                </select>
+              </div>
+            </div>
+            
+            <button
+              type="submit"
+              [disabled]="!title.trim() || isLoading"
+              class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 transition-all duration-200 rounded-lg py-3 font-semibold text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none disabled:cursor-not-allowed"
+            >
+              <span *ngIf="!isLoading">✨ Add Todo</span>
+              <span *ngIf="isLoading" class="flex items-center justify-center space-x-2">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Adding...</span>
+              </span>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Todo List -->
+      <div class="lg:col-span-2">
+        <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700 rounded-xl p-6 shadow-xl">
+          
+          <!-- Controls -->
+          <div class="mb-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+              <h2 class="text-2xl font-bold text-purple-400 flex items-center space-x-2">
+                <span>📋</span>
+                <span>Your Todos</span>
+              </h2>
+            </div>
+            
+            <!-- Search and Filters -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <input
+                  type="text"
+                  placeholder="🔍 Search todos..."
+                  [(ngModel)]="searchQuery"
+                  (ngModelChange)="onSearchChange()"
+                  class="w-full p-2 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white placeholder-gray-400"
+                />
+              </div>
+              
+              <div>
+                <select
+                  [(ngModel)]="filterStatus"
+                  (ngModelChange)="onFilterChange()"
+                  class="w-full p-2 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">🔵 Active</option>
+                  <option value="Pending">⏳ Pending</option>
+                  <option value="Completed">✅ Completed</option>
+                </select>
+              </div>
+              
+              <div>
+                <select
+                  [(ngModel)]="sortBy"
+                  (ngModelChange)="onSortChange()"
+                  class="w-full p-2 rounded-lg bg-gray-700/50 border border-gray-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                >
+                  <option value="created">📅 Date Created</option>
+                  <option value="updated">🔄 Last Updated</option>
+                  <option value="priority">⚡ Priority</option>
+                  <option value="status">📊 Status</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Todo Items -->
+          <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+            <div
+              *ngFor="let todo of filteredTodos$ | async; trackBy: trackByTodoId"
+              class="group bg-gray-700/50 border border-gray-600 rounded-xl p-4 transition-all duration-200 hover:bg-gray-700/70 hover:border-gray-500 hover:shadow-lg"
+            >
+              
+              <!-- Normal View -->
+              <div *ngIf="editingTodoId !== todo.id">
+                <div class="flex justify-between items-start">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-3 mb-2">
+                      <button
+                        (click)="toggleStatus(todo)"
+                        class="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all"
+                        [ngClass]="{
+                          'bg-green-500 border-green-500 text-white': todo.status === 'Completed',
+                          'border-gray-400 hover:border-purple-400': todo.status !== 'Completed'
+                        }"
+                      >
+                        <span *ngIf="todo.status === 'Completed'" class="text-xs">✓</span>
+                      </button>
+                      
+                      <h3 
+                        class="font-semibold text-lg text-white truncate"
+                        [ngClass]="{'line-through text-gray-400': todo.status === 'Completed'}"
+                      >
+                        {{ todo.title }}
+                      </h3>
+                    </div>
+                    
+                    <p 
+                      *ngIf="todo.description" 
+                      class="text-gray-300 text-sm mb-3 line-clamp-2"
+                      [ngClass]="{'line-through text-gray-500': todo.status === 'Completed'}"
+                    >
+                      {{ todo.description }}
+                    </p>
+                    
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                      <span
+                        class="inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full font-medium"
+                        [ngClass]="{
+                          'bg-green-900/50 text-green-300 border border-green-700': todo.status === 'Completed',
+                          'bg-yellow-900/50 text-yellow-300 border border-yellow-700': todo.status === 'Pending',
+                          'bg-blue-900/50 text-blue-300 border border-blue-700': todo.status === 'Active'
+                        }"
+                      >
+                        <span>{{ getStatusIcon(todo.status) }}</span>
+                        <span>{{ todo.status }}</span>
+                      </span>
+                      
+                      <span
+                        class="inline-flex items-center space-x-1 px-2 py-1 text-xs rounded-full font-medium"
+                        [ngClass]="{
+                          'bg-red-900/50 text-red-300 border border-red-700': todo.priority === 'High',
+                          'bg-yellow-900/50 text-yellow-300 border border-yellow-700': todo.priority === 'Medium',
+                          'bg-green-900/50 text-green-300 border border-green-700': todo.priority === 'Low'
+                        }"
+                      >
+                        <span>{{ getPriorityIcon(todo.priority) }}</span>
+                        <span>{{ todo.priority }}</span>
+                      </span>
+                    </div>
+                    
+                    <div class="text-xs text-gray-500 space-y-1">
+                      <div>Created: {{ formatDate(todo.createdAt) }}</div>
+                      <div *ngIf="todo.updatedAt !== todo.createdAt">
+                        Updated: {{ formatDate(todo.updatedAt) }}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="flex space-x-2 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      (click)="startEdit(todo)"
+                      class="p-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-all"
+                      title="Edit todo"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      (click)="todo.id && deleteTodo(todo.id)"
+                      class="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-all"
+                      title="Delete todo"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Edit View -->
+              <div *ngIf="editingTodoId === todo.id" class="space-y-4">
+                <div>
+                  <input
+                    type="text"
+                    [(ngModel)]="editForm.title"
+                    class="w-full p-3 rounded-lg bg-gray-600/50 border border-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                    placeholder="Title"
+                  />
+                </div>
+                
+                <div>
+                  <textarea
+                    [(ngModel)]="editForm.description"
+                    class="w-full p-3 rounded-lg bg-gray-600/50 border border-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white resize-none"
+                    placeholder="Description"
+                    rows="3"
+                  ></textarea>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                  <select
+                    [(ngModel)]="editForm.status"
+                    class="p-3 rounded-lg bg-gray-600/50 border border-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                  >
+                    <option value="Active">🔵 Active</option>
+                    <option value="Pending">⏳ Pending</option>
+                    <option value="Completed">✅ Completed</option>
+                  </select>
+                  
+                  <select
+                    [(ngModel)]="editForm.priority"
+                    class="p-3 rounded-lg bg-gray-600/50 border border-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 focus:outline-none transition-all text-white"
+                  >
+                    <option value="Low">🟢 Low</option>
+                    <option value="Medium">🟡 Medium</option>
+                    <option value="High">🔴 High</option>
+                  </select>
+                </div>
+                
+                <div class="flex space-x-3">
+                  <button
+                    (click)="saveEdit()"
+                    class="flex-1 bg-green-600 hover:bg-green-700 transition-colors rounded-lg py-2 font-semibold text-white"
+                  >
+                    💾 Save
+                  </button>
+                  <button
+                    (click)="cancelEdit()"
+                    class="flex-1 bg-gray-600 hover:bg-gray-700 transition-colors rounded-lg py-2 font-semibold text-white"
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div *ngIf="(filteredTodos$ | async)?.length === 0" class="text-center py-12">
+              <div class="text-6xl mb-4">📝</div>
+              <h3 class="text-xl font-semibold text-gray-300 mb-2">No todos found</h3>
+              <p class="text-gray-500">
+                <span *ngIf="searchQuery || filterStatus !== 'All'">
+                  Try adjusting your search or filters
+                </span>
+                <span *ngIf="!searchQuery && filterStatus === 'All'">
+                  Create your first todo to get started!
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
