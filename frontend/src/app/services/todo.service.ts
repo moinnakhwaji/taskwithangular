@@ -8,7 +8,7 @@ import { Auth } from '@angular/fire/auth';
 export class TodoService {
   private http = inject(HttpClient);
   private auth = inject(Auth);
-  private baseUrl = 'http://localhost:3000/api/todos';
+  private baseUrl = `https://taskwithangular.vercel.app/api/todos`;
   
   // Use BehaviorSubject to manage todos state
   private todosSubject = new BehaviorSubject<Todo[]>([]);
