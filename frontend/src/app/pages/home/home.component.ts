@@ -14,18 +14,21 @@ import { Todo } from '../../services/todo.model';
   styleUrls: ['./home.component.css'],
   imports: [CommonModule, FormsModule],
 })
-export class HomeComponent implements OnInit {
+export default class HomeComponent implements OnInit {
   private todoService = inject(TodoService);
   private auth = inject(Auth);
 
-  todos$: Observable<Todo[]> = this.todoService.getTodos();
+  todos$: Observable<Todo[]> | undefined;
+
   // Form fields
   title = '';
   description = '';
   status: 'Active' | 'Completed' | 'Pending' = 'Active';
   priority: 'Low' | 'Medium' | 'High' = 'Low';
 
-  ngOnInit(): void {}
+  async ngOnInit(): Promise<void> {
+    this.todos$ = await this.todoService.getTodos();
+  }
 
   async addTodo() {
     const user = this.auth.currentUser;
@@ -41,12 +44,12 @@ export class HomeComponent implements OnInit {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       uid: user.uid,
-      email:""
+      email: "",
     };
 
     await this.todoService.addTodo(todo);
 
-    // Clear inputs
+    // Reset form fields
     this.title = '';
     this.description = '';
     this.status = 'Active';

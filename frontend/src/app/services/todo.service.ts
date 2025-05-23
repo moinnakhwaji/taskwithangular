@@ -1,80 +1,54 @@
-import {
-  Firestore,
-  collection,
-  query,
-  where,
-  collectionData,
-  addDoc,
-  deleteDoc,
-  doc,
-  CollectionReference,
-  DocumentData,
-} from '@angular/fire/firestore';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { from, Observable, switchMap } from 'rxjs';
 import { Todo } from './todo.model';
 import { Auth } from '@angular/fire/auth';
 
 @Injectable({ providedIn: 'root' })
 export class TodoService {
-  private firestore = inject(Firestore);
+  private http = inject(HttpClient);
   private auth = inject(Auth);
 
-  private converter = {
-    toFirestore: (todo: Todo): DocumentData => ({ ...todo }),
-    fromFirestore: (snapshot: any): Todo => {
-      const data = snapshot.data();
-      return {
-        //@ts-ignore
-        id: snapshot.id,
-        title: data.title,
-        description: data.description,
-        status: data.status,
-        priority: data.priority,
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt,
-        uid: data.uid,
-        email: data.email,
-      };
-    },
-  };
+  private baseUrl = 'http://localhost:3000/api/todos';
 
-  private todosCollection: CollectionReference<Todo> = collection(
-    this.firestore,
-    'todos'
-  ).withConverter(this.converter);
+  private getAuthHeaders(): Promise<HttpHeaders> {
+    return this.auth.currentUser?.getIdToken().then((token) => {
+      return new HttpHeaders({
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      });
+    }) ?? Promise.reject('User not authenticated');
+  }
 
   getTodos(): Observable<Todo[]> {
-    const user = this.auth.currentUser;
-    if (!user || !user.email) throw new Error('User not authenticated');
-
-    const userQuery = query(
-      this.todosCollection,
-      where('email', '==', user.email)
+    return from(this.getAuthHeaders()).pipe(
+      switchMap((headers) =>
+        this.http.get<Todo[]>(`${this.baseUrl}`, { headers })
+      )
     );
-
-    return collectionData(userQuery, { idField: 'id' }) as Observable<Todo[]>;
   }
 
-  addTodo(todo: Todo) {
-    const user = this.auth.currentUser;
-    if (!user || !user.email) throw new Error('User not authenticated');
-
-    const todoWithEmail: Todo = {
-      ...todo,
-      email: user.email,
-      uid: user.uid,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    return addDoc(this.todosCollection, todoWithEmail);
+  addTodo(todo: Partial<Todo>): Observable<any> {
+    return from(this.getAuthHeaders()).pipe(
+      switchMap((headers) =>
+        this.http.post(`${this.baseUrl}`, todo, { headers })
+      )
+    );
   }
 
-  deleteTodo(id: string) {
-    const todoDocRef = doc(this.firestore, 'todos', id).withConverter(
-      this.converter
+  updateTodo(id: string, updatedTodo: Partial<Todo>): Observable<any> {
+    return from(this.getAuthHeaders()).pipe(
+      switchMap((headers) =>
+        this.http.patch(`${this.baseUrl}/${id}`, updatedTodo, { headers })
+      )
     );
-    return deleteDoc(todoDocRef);
+  }
+
+  deleteTodo(id: string): Observable<any> {
+    return from(this.getAuthHeaders()).pipe(
+      switchMap((headers) =>
+        this.http.delete(`${this.baseUrl}/${id}`, { headers })
+      )
+    );
   }
 }

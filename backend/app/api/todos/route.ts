@@ -1,9 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import admin from "@/firebase/firebaseAdmin";
 
+const ALLOWED_ORIGIN = "http://localhost:4200"; // your Angular app origin
+
+// Helper to create CORS headers
+function addCorsHeaders(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.headers.set("Access-Control-Allow-Credentials", "true");
+  return response;
+}
+
+
+export async function OPTIONS() {
+  // Handle OPTIONS preflight request
+  const response = NextResponse.json(null, { status: 204 }); // No content response for preflight
+  return addCorsHeaders(response);
+}
+
 export async function GET(req: NextRequest) {
+  // Add CORS headers to all responses
   const token = req.headers.get("authorization")?.split("Bearer ")[1];
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token) {
+    const res = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return addCorsHeaders(res);
+  }
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
@@ -13,18 +35,24 @@ export async function GET(req: NextRequest) {
       .where("userId", "==", userId)
       .orderBy("createdAt", "desc")
       .get();
-//@ts-ignore
+
+    //@ts-ignore
     const todos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    return NextResponse.json(todos);
+    const res = NextResponse.json(todos);
+    return addCorsHeaders(res);
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const res = NextResponse.json({ error: "Internal error" }, { status: 500 });
+    return addCorsHeaders(res);
   }
 }
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.split("Bearer ")[1];
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!token) {
+    const res = NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return addCorsHeaders(res);
+  }
 
   try {
     const decodedToken = await admin.auth().verifyIdToken(token);
@@ -45,9 +73,11 @@ export async function POST(req: NextRequest) {
 
     const docRef = await admin.firestore().collection("todos").add(newTask);
 
-    return NextResponse.json({ id: docRef.id, ...newTask });
+    const res = NextResponse.json({ id: docRef.id, ...newTask });
+    return addCorsHeaders(res);
   } catch (err) {
     console.error(err);
-    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    const res = NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    return addCorsHeaders(res);
   }
 }
